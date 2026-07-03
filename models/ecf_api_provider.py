@@ -691,10 +691,17 @@ class EcfApiProvider(models.Model):
             # Buscar XML firmado en la respuesta
             signed_xml = self._extract_signed_xml(response_data, raw_response)
 
-            if 200 <= r.status_code < 300:
+            # MSeller puede devolver HTTP 200 con un error de negocio en el body
+            # (ej. rechazo de la DGII por estructura de XML invalida), no solo
+            # errores HTTP. Hay que revisar el campo 'error' explicitamente.
+            mseller_error = None
+            if isinstance(response_data, dict):
+                mseller_error = response_data.get('error') or response_data.get('mensaje')
+
+            if 200 <= r.status_code < 300 and not mseller_error:
                 return True, response_data, track_id, None, raw_response, signed_xml
             else:
-                error_msg = message or f"HTTP {r.status_code}"
+                error_msg = mseller_error or message or f"HTTP {r.status_code}"
                 return False, response_data, track_id, error_msg, raw_response, signed_xml
 
         except requests.exceptions.RequestException as e:

@@ -40,6 +40,8 @@ class EcfApiLog(models.Model):
         ('wizard', 'Wizard'),
         ('manual', 'Manual'),
         ('invoice', 'Factura'),
+        ('credit_note', 'Nota de Crédito'),
+        ('debit_note', 'Nota de Débito'),
         ('callback_recepcion', 'Callback Recepcion DGII'),
         ('callback_recepcion_json', 'Callback Recepcion (JSON)'),
         ('callback_aprobacion', 'Callback Aprobacion Comercial'),

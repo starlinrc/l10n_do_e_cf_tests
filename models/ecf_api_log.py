@@ -39,6 +39,7 @@ class EcfApiLog(models.Model):
         ('acecf_import', 'Importacion ACECF'),
         ('wizard', 'Wizard'),
         ('manual', 'Manual'),
+        ('invoice', 'Factura'),
         ('callback_recepcion', 'Callback Recepcion DGII'),
         ('callback_recepcion_json', 'Callback Recepcion (JSON)'),
         ('callback_aprobacion', 'Callback Aprobacion Comercial'),

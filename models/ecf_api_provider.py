@@ -544,7 +544,8 @@ class EcfApiProvider(models.Model):
             raise
 
     def send_ecf(self, ecf_json, rnc=None, encf=None, origin='other',
-                 test_case_id=None, simulation_doc_id=None, acecf_case_id=None):
+                 test_case_id=None, simulation_doc_id=None, acecf_case_id=None,
+                 validate_only=False):
         """
         Envia un documento e-CF usando este proveedor y registra en log.
 
@@ -556,6 +557,8 @@ class EcfApiProvider(models.Model):
             test_case_id: ID del caso de prueba (opcional)
             simulation_doc_id: ID del documento de simulacion (opcional)
             acecf_case_id: ID del caso ACECF (opcional)
+            validate_only: si True, solo valida el formato del documento sin
+                consumir la secuencia de e-NCF ni enviarlo a DGII (solo MSeller).
 
         Returns:
             tuple: (success, response_data, track_id, error_message, raw_response, signed_xml)
@@ -567,6 +570,13 @@ class EcfApiProvider(models.Model):
             - signed_xml: XML firmado si existe (str o None)
         """
         self.ensure_one()
+
+        if validate_only and self.provider_type != 'mseller':
+            raise UserError(_(
+                'La validación sin envío (?validate=true) solo está soportada '
+                'por el proveedor MSeller.'
+            ))
+
         import time
         start_time = time.time()
 
@@ -605,7 +615,7 @@ class EcfApiProvider(models.Model):
 
         try:
             if self.provider_type == 'mseller':
-                result = self._send_mseller(ecf_json, use_summary=use_summary_endpoint)
+                result = self._send_mseller(ecf_json, use_summary=use_summary_endpoint, validate_only=validate_only)
             elif self.provider_type == 'local':
                 result = self._send_local(ecf_json, rnc, encf, use_summary=use_summary_endpoint)
             else:  # custom
@@ -662,7 +672,7 @@ class EcfApiProvider(models.Model):
             )
             return False, None, None, str(e), None, None
 
-    def _send_mseller(self, ecf_json, use_summary=False):
+    def _send_mseller(self, ecf_json, use_summary=False, validate_only=False):
         """Envía documento a MSeller API"""
         self.ensure_one()
 
@@ -674,6 +684,11 @@ class EcfApiProvider(models.Model):
         url = f"{self.api_url.rstrip('/')}/{self.mseller_env}/documentos-ecf"
         if use_summary:
             _logger.info("[MSeller] Usando endpoint normal (MSeller maneja internamente el tipo de documento)")
+        if validate_only:
+            # MSeller valida el formato del documento sin consumir la
+            # secuencia de e-NCF ni enviarlo a DGII.
+            url += "?validate=true"
+            _logger.info("[MSeller] Envío en modo validación (?validate=true) - no consume secuencia ni llega a DGII")
         headers = self._get_auth_headers(token=token)
 
         # Enviar
